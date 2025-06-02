@@ -1,19 +1,17 @@
-using System;
 using System.Collections;
 using UnityEngine;
 
-
-public class StateMachine : MonoBehaviour, ITrappable
+public class StateMachineRun : MonoBehaviour, ITrappable
 {
     public enum State
     {
         Patrol,
-        Chasing,
-        Attack,
+        Run,
+        Flee
     }
     public State state;
 
-    [SerializeField] private Material material;
+    [SerializeField]private Material material;
 
     public GameObject player;
     private Rigidbody rb;
@@ -37,12 +35,12 @@ public class StateMachine : MonoBehaviour, ITrappable
                 StartCoroutine(PatrolState());
                 material.color = Color.green;
                 break;
-            case State.Chasing:
-                StartCoroutine(ChasingState());
+            case State.Run:
+                StartCoroutine(RunState());
                 material.color = Color.yellow;
                 break;
-            case State.Attack:
-                StartCoroutine(AttackState());
+            case State.Flee:
+                StartCoroutine(FleeState());
                 material.color = Color.red;
                 break;
             default:
@@ -50,7 +48,7 @@ public class StateMachine : MonoBehaviour, ITrappable
         }
     }
 
-    bool isFacingPlayer() 
+    bool isFacingPlayer()
     {
         Vector3 directionToPlayer = player.transform.position - transform.position;
         directionToPlayer.Normalize();
@@ -60,52 +58,67 @@ public class StateMachine : MonoBehaviour, ITrappable
         return dotResult >= 0.95f;
     }
 
-    IEnumerator PatrolState()
+    IEnumerator PatrolState() 
     {
-        Debug.Log("Entering Patrol State");
-        while (state == State.Patrol)
+        while (state == State.Patrol) 
         {
-            transform.rotation *= Quaternion.Euler(0f, 50f * Time.deltaTime, 0f);
+            transform.rotation = transform.rotation *= Quaternion.Euler(0f, 50f * Time.deltaTime, 0f);
+            if (!isFacingPlayer())
+                transform.rotation = transform.rotation *= Quaternion.Euler(0f, 50f * Time.deltaTime, 0f);
 
-            if (isFacingPlayer())
-            { state = State.Chasing; }
+            float distanceToPlayer = Vector3.Distance(transform.position, player.transform.position);
 
-            yield return null; // Waits for a frame
+            if (distanceToPlayer <= 10)
+            { state = State.Run; }
+
+            if (distanceToPlayer <= 5)
+            {
+                state = State.Flee;
+            }
+
+            yield return null;
         }
         NextState();
     }
 
-    IEnumerator ChasingState()
+    IEnumerator RunState() 
     {
-        while (state == State.Chasing)
+        Debug.Log("Entering Run State");
+        while (state == State.Run) 
         {
             float wave = Mathf.Sin(Time.time * 20f) * 0.1f + 1f;
             float wave2 = Mathf.Cos(Time.time * 20f) * 0.1f + 1f;
             transform.localScale = new Vector3(wave, wave2, wave);
 
+            float distanceToPlayer = Vector3.Distance(transform.position, player.transform.position);
+
             Vector3 direction = player.transform.position - transform.position;
-            rb.AddForce(direction.normalized * (1000f * Time.deltaTime));
+            rb.AddForce(direction.normalized * (-1000f * Time.deltaTime));
 
-            if (direction.magnitude < 10f)
-            { state = State.Attack; }
+            if (distanceToPlayer >= 15)
+            {
+                state = State.Patrol;
+            }
 
-            if (!isFacingPlayer()) 
-            { state = State.Patrol; }
+            if (distanceToPlayer <= 5)
+            {
+                state = State.Flee;
+            }
 
-            yield return null; // Waits for a frame
+            yield return null;
         }
         NextState();
     }
-    IEnumerator AttackState()
+    IEnumerator FleeState()
     {
-        transform.localScale = new Vector3(transform.localScale.x * 0.4f, 
+        transform.localScale = new Vector3(transform.localScale.x * 0.4f,
                                             transform.localScale.y * 0.4f,
                                             transform.localScale.z * 3);
 
         Vector3 direction = player.transform.position - transform.position;
-        rb.AddForce(direction.normalized * 800f);
+        rb.AddForce(direction.normalized * -1000f);
 
-        while (state == State.Attack) 
+        while (state == State.Flee)
         {
             yield return new WaitForSeconds(2f);
             state = State.Patrol;
@@ -116,21 +129,10 @@ public class StateMachine : MonoBehaviour, ITrappable
         NextState();
     }
 
-    private void OnCollisionEnter(Collision other)
-    {
-        if (state != State.Attack) return;
-        if (other.gameObject == player) 
-        { 
-            Rigidbody rb = player.GetComponent<Rigidbody>();
 
-            Vector3 hitDir = player.transform.position - other.contacts[0].point;
-
-            rb.AddForce(hitDir.normalized * 100f * rb.linearVelocity.magnitude);
-        }
-    }
     public int PointValue()
     {
-        return 2;
+        return 4;
     }
 
     public bool CaptureAnimation()
@@ -145,5 +147,3 @@ public class StateMachine : MonoBehaviour, ITrappable
         return true;
     }
 }
-
-
