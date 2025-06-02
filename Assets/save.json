@@ -1,6 +1,8 @@
 {
     "scores": [
         7,
+        7,
+        6,
         6,
         5,
         4,
@@ -8,19 +10,19 @@
         4,
         4,
         4,
-        3,
         3
     ],
     "names": [
         "Jim man",
+        "Jim",
         "Ghost Man",
+        "Hat man",
         "Idea man",
         "Ghost Man",
         "Jim",
         "Hat man",
         "Hat man",
         "Jim man",
-        "Good man",
-        "Ghost Man"
+        "Good man"
     ]
 }
